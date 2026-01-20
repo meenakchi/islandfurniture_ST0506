@@ -1,0 +1,103 @@
+<!-- <!DOCTYPE html>
+<html>
+<head>
+    <title>Showroom</title>
+    <script src="../checkCountry.js"></script>
+    <script src="../../header.js"></script>
+    <style>
+        .products {
+            list-style: none;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            padding-left: 0;
+        }
+        .products li {
+            width: 220px;
+            text-align: center;
+        }
+        .products img {
+            width: 100%;
+            border-radius: 8px;
+        }
+        .categoryBtn {
+            margin-right: 10px;
+            margin-bottom: 20px;
+            padding: 8px 16px;
+            cursor: pointer;
+        }
+        
+    </style>
+</head>
+<body>
+    <script src="menu2.js"></script>
+
+    <div class="container">
+        <h2>Showroom</h2>
+
+        <!-- Categories will be dynamically loaded -->
+        <div id="showroomCategories"></div>
+
+        <h3 id="categoryTitle"></h3>
+        <ul id="showroomItems" class="products"></ul>
+    </div>
+
+    <script>
+        var countryPrefix = localStorage.getItem('urlPrefix');
+        var countryId = localStorage.getItem('countryId');
+
+        // Fetch available categories from backend
+        fetch(new Request('/api/getShowroomCategories?countryId=' + countryId, { method: 'GET' }))
+        .then(response => response.json())
+        .then(categories => {
+            var catDiv = document.getElementById('showroomCategories');
+            categories.forEach(cat => {
+                var btn = document.createElement('button');
+                btn.className = 'categoryBtn';
+                btn.innerText = cat.name;
+                btn.dataset.cat = cat.name;
+                btn.addEventListener('click', function() {
+                    loadCategory(cat.name);
+                });
+                catDiv.appendChild(btn);
+            });
+
+            // Load the first category by default
+            if(categories.length > 0) loadCategory(categories[0].name);
+        })
+        .catch(err => console.log('Error fetching categories:', err));
+
+        function loadCategory(cat) {
+            document.getElementById('categoryTitle').innerText = cat;
+            var itemsList = document.getElementById('showroomItems');
+            itemsList.innerHTML = '';
+
+            // Fetch furniture items for this category
+            fetch(new Request('/api/getShowroomByCategory?cat=' + encodeURIComponent(cat) + '&countryId=' + countryId, { method: 'GET' }))
+            .then(response => response.json())
+            .then(items => {
+                if(items.length === 0){
+                    itemsList.innerHTML = '<li>No items in this category.</li>';
+                    return;
+                }
+
+                items.forEach(item => {
+                    var li = document.createElement('li');
+                    li.innerHTML = `
+                        <a href="/B/${countryPrefix}/furnitureProductDetails.html?sku=${item.sku}">
+                            <img src="${item.imageURL}" alt="${item.name}">
+                            <h4>${item.name}</h4>
+                        </a>
+                        <p>Price: $${item.price}.00</p>
+                    `;
+                    itemsList.appendChild(li);
+                });
+            })
+            .catch(err => {
+                console.log('Error fetching showroom items:', err);
+                itemsList.innerHTML = '<li>Failed to load items. Please try again later.</li>';
+            });
+        }
+    </script>
+</body>
+</html> -->

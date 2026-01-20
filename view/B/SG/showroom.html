@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Showroom</title>
+    <script src="../checkCountry.js"></script>
+    <script src="../../header.js"></script>
+
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f9f9f9; }
+        h2 { text-align: center; margin-bottom: 20px; }
+
+        /* Categories buttons */
+        .categories {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        .category {
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .category:hover { background: #0056b3; }
+
+        /* Scenes grid */
+        .products {
+            list-style: none;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            padding-left: 0;
+            justify-content: center;
+        }
+        .products li {
+            width: 220px;
+            text-align: center;
+            cursor: pointer;
+        }
+        .products li img {
+            width: 200px;
+            border-radius: 5px;
+        }
+        .scene-name {
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        /* Furniture Modal */
+        #itemsModal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            justify-content: center; align-items: center;
+        }
+        #itemsContent {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            max-width: 900px; max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+        }
+        .item {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            align-items: center;
+        }
+        .item img {
+            width: 100px; height: 100px; object-fit: cover; border-radius: 5px;
+        }
+        .item-info {
+            display: flex;
+            flex-direction: column;
+        }
+        .close { position: absolute; top: 10px; right: 20px; cursor: pointer; font-size: 24px; }
+    </style>
+</head>
+
+<body>
+    <script src="menu2.js"></script>
+
+    <h2>Showroom</h2>
+
+    <!-- Categories -->
+    <div class="categories" id="categories"></div>
+
+    <!-- Showroom Scenes -->
+    <ul class="products" id="scenes"></ul>
+
+    <!-- Furniture Items Modal -->
+    <div id="itemsModal">
+        <div id="itemsContent">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h3>Furniture Items</h3>
+            <ul id="itemsList" class="products"></ul>
+        </div>
+    </div>
+
+    <script>
+        var countryId = localStorage.getItem('countryId');
+        var countryPrefix = localStorage.getItem('urlPrefix');
+
+        const categoriesDiv = document.getElementById('categories');
+        const scenesUl = document.getElementById('scenes');
+        const itemsModal = document.getElementById('itemsModal');
+        const itemsList = document.getElementById('itemsList');
+
+        const placeholderImage = "/img/default_item.png"; // fallback image for furniture
+
+        // Load showroom categories
+        fetch('/api/getShowroomCategories')
+        .then(res => res.json())
+        .then(categories => {
+            if (categories.length === 0) {
+                categoriesDiv.innerHTML = 'No categories available.';
+                return;
+            }
+            categories.forEach(cat => {
+                const btn = document.createElement('div');
+                btn.className = 'category';
+                btn.textContent = cat.category || cat.name; // support old/new API
+                btn.onclick = () => loadScenes(cat.category || cat.name);
+                categoriesDiv.appendChild(btn);
+            });
+        })
+        .catch(() => { categoriesDiv.innerHTML = 'Failed to load categories.'; });
+
+        // Load scenes by category
+        function loadScenes(category) {
+            scenesUl.innerHTML = 'Loading...';
+            fetch(`/api/getScenesByCategory?category=${encodeURIComponent(category)}`)
+            .then(res => res.json())
+            .then(scenes => {
+                scenesUl.innerHTML = '';
+                if (scenes.length === 0) {
+                    scenesUl.innerHTML = '<li>No showrooms available for this category.</li>';
+                    return;
+                }
+                scenes.forEach(scene => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `
+                        <img src="${scene.image_path}" alt="${scene.title}">
+                        <div class="scene-name">${scene.title}</div>
+                    `;
+                    li.onclick = () => loadSceneItems(scene.id);
+                    scenesUl.appendChild(li);
+                });
+            })
+            .catch(() => { scenesUl.innerHTML = '<li>Failed to load showrooms.</li>'; });
+        }
+
+        // Load furniture items for a scene
+        // Load furniture items for a scene
+function loadSceneItems(sceneId) {
+    itemsList.innerHTML = 'Loading...';
+    itemsModal.style.display = 'flex';
+    fetch(`/api/getSceneItems?sceneId=${sceneId}`)
+    .then(res => res.json())
+    .then(items => {
+        itemsList.innerHTML = '';
+        if (items.length === 0) {
+            itemsList.innerHTML = '<li>No items found.</li>';
+            return;
+        }
+        items.forEach(item => {
+            const li = document.createElement('li');
+            li.className = "item";
+
+            // Make the whole item clickable and navigate to details page
+            li.innerHTML = `
+                <img src="${item.IMAGEURL || placeholderImage}" alt="${item.NAME}">
+                <div class="item-info">
+                    <strong>${item.NAME}</strong>
+                    <small>SKU: ${item.SKU}</small>
+                </div>
+            `;
+            
+            li.style.cursor = "pointer";
+            li.onclick = () => {
+                // Go to furniture details page with SKU in query parameter
+                window.location.href = `/B/${countryPrefix}/furnitureProductDetails.html?sku=${encodeURIComponent(item.SKU)}`;
+            };
+
+            itemsList.appendChild(li);
+        });
+    })
+    .catch(() => { itemsList.innerHTML = '<li>Failed to load items.</li>'; });
+}
+
+
+        function closeModal() {
+            itemsModal.style.display = 'none';
+        }
+    </script>
+</body>
+</html>

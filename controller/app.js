@@ -17,6 +17,15 @@ app.use(require('./warehouseentityDB.js'));
 app.use(require('./lineitementityDB.js'));
 app.use(require('./storagebinentityDB.js'));
 
+var showroomRoutes = require('./showroom.js');
+app.use('/img', express.static('view/img'));
+
+app.use('/api', showroomRoutes);
+var promotionsRoute = require('./promotions.js');
+app.use('/api', promotionsRoute);
+
+// showroom APIs
+app.use('/api', showroomRoutes);
 let middleware = require('./middleware');
 app.get('/api/checkToken', middleware.checkToken, function (req, res) {
     res.send({success: true});
