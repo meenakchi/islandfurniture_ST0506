@@ -5,11 +5,14 @@
         <script>
             var authToken = null;
             var countryPrefix = localStorage.getItem('urlPrefix');
+            var member = null;
+            
             //get token from session
             authToken = sessionStorage.getItem('token');
             if (authToken == null || authToken == "") {
                 window.location.href = '/B/' + countryPrefix + '/memberLogin.html';
             }
+            
             fetch(new Request('/api/checkToken',
             {
                 method: 'GET',
@@ -26,14 +29,52 @@
                 console.log(error);
             });
 
-            var member = null;
             document.addEventListener('DOMContentLoaded', function(){
-                member = JSON.parse(sessionStorage.getItem("member"));
-
-                if(member.sla == 1) {
-                    document.getElementById("serviceLevelAgreement").checked = true;
-                }
-
+                var memberEmail = sessionStorage.getItem('memberEmail');
+                
+                // ✅ FETCH MEMBER DATA FROM API
+                fetch(new Request('/api/getMember?email=' + memberEmail,
+                {
+                    method: 'GET',
+                    headers: {
+                        Authorization: 'Bearer ' + authToken
+                    }
+                })).then(function (response) {
+                    return response.json();
+                }).then(function (data) {
+                    member = data;
+                    
+                    // ✅ POPULATE ALL FORM FIELDS
+                    document.getElementById("name").value = member.name || '';
+                    document.getElementById("email").value = member.email || '';
+                    document.getElementById("phone").value = member.phone || '';
+                    document.getElementById("country").value = member.city || '';
+                    document.getElementById("address").value = member.address || '';
+                    document.getElementById("age").value = member.age || '';
+                    document.getElementById("income").value = member.income || '';
+                    
+                    // Set security question
+                    if(member.securityQuestion) {
+                        document.getElementById("securityQuestion").value = member.securityQuestion;
+                    }
+                    if(member.securityAnswer) {
+                        document.getElementById("securityAnswer").value = member.securityAnswer || '';
+                    }
+                    
+                    // Set service level agreement checkbox
+                    if(member.sla == 1) {
+                        document.getElementById("serviceLevelAgreement").checked = true;
+                    }
+                    
+                    // Now fetch bought items
+                    loadBoughtItems();
+                    
+                }).catch(function(error) {
+                    console.log(error);
+                });
+            }, false);
+            
+            function loadBoughtItems() {
                 //Get Bought Items
                 fetch(new Request('/api/getBoughtItem/' + member.id,
                 {
@@ -169,7 +210,7 @@
                 }).catch(function(error) {
                     console.log(error);
                 });
-            }, false);
+            }
 
             function addWorkDays(startDate, days) {
                 var dow = startDate.getDay();
@@ -195,7 +236,7 @@
                 var password = document.getElementById("password").value;
                 var repassword = document.getElementById("repassword").value;
                 var ok = true;
-                console.log(oldPassword)
+                
                 if (document.getElementById("profileForm").checkValidity()) {
                     if (oldPassword != "" && password != "" && repassword != "") {
                         var memberData = {
