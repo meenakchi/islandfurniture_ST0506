@@ -6,6 +6,7 @@ var bcrypt = require('bcrypt');
 var nodemailer = require('nodemailer');
 let jwt = require('jsonwebtoken');
 let config = require('./config');
+
 var memberDB = {
     checkMemberLogin: function (email, password) {
         return new Promise( ( resolve, reject ) => {
@@ -24,7 +25,7 @@ var memberDB = {
                             return reject(err);
                         }
                         else {
-                            if(result == null || result == undefined || result == '') {
+                            if(result == null || result == undefined || result == '' || result.length === 0) {
                                 conn.end();
                                 return resolve({success:false});
                             }
@@ -69,6 +70,10 @@ var memberDB = {
                             conn.end();
                             return reject(err);
                         } else {
+                            if (!result || result.length === 0) {
+                                conn.end();
+                                return reject(new Error('Member not found'));
+                            }
                             var member = new Member();
                             member.accountActivationStatus = result[0].ACCOUNTACTIVATIONSTATUS;
                             conn.end();
@@ -95,6 +100,12 @@ var memberDB = {
                             conn.end();
                             return reject(err);
                         } else {
+                            // ✅ FIX: Check if result exists and has data
+                            if (!result || result.length === 0) {
+                                conn.end();
+                                return reject(new Error('Member not found'));
+                            }
+                            
                             var member = new Member();
                             member.id = result[0].ID;
                             member.dob = result[0].DOB;
@@ -207,50 +218,50 @@ var memberDB = {
                 }
             });
         });
-    },registerMember: function (email, password, hostName) {
-    return new Promise((resolve, reject) => {
-        var conn = db.getConnection();
-        conn.connect(function (err) {
-            if (err) {
-                conn.end();
-                return reject(err);
-            }
-
-            bcrypt.hash(password, 5, function (err, hash) {
+    },
+    registerMember: function (email, password, hostName) {
+        return new Promise((resolve, reject) => {
+            var conn = db.getConnection();
+            conn.connect(function (err) {
                 if (err) {
                     conn.end();
                     return reject(err);
                 }
 
-                var activationCode = generateRandomNumber(40);
-                var passwordReset = generateRandomNumber(40);
-// After inserting the member, also activate the account immediately
-                var sql =
-                    'INSERT INTO memberentity(ACTIVATIONCODE,EMAIL,JOINDATE,PASSWORDHASH,PASSWORDRESET,LOYALTYTIER_ID) ' +
-                    'VALUES (?,?,?,?,?,15)';
-
-                var sqlArgs = [activationCode, email, new Date(), hash, passwordReset];
-
-                conn.query(sql, sqlArgs, function (err, result) {
+                bcrypt.hash(password, 5, function (err, hash) {
                     if (err) {
                         conn.end();
                         return reject(err);
                     }
 
-                    conn.query(
-                        'UPDATE memberentity SET ACCOUNTACTIVATIONSTATUS=1 WHERE EMAIL=?',
-                        [email],
-                        function () {
+                    var activationCode = generateRandomNumber(40);
+                    var passwordReset = generateRandomNumber(40);
+                    
+                    var sql =
+                        'INSERT INTO memberentity(ACTIVATIONCODE,EMAIL,JOINDATE,PASSWORDHASH,PASSWORDRESET,LOYALTYTIER_ID) ' +
+                        'VALUES (?,?,?,?,?,15)';
+
+                    var sqlArgs = [activationCode, email, new Date(), hash, passwordReset];
+
+                    conn.query(sql, sqlArgs, function (err, result) {
+                        if (err) {
                             conn.end();
-                            resolve({ success: true });
+                            return reject(err);
                         }
-                    );
+
+                        conn.query(
+                            'UPDATE memberentity SET ACCOUNTACTIVATIONSTATUS=1 WHERE EMAIL=?',
+                            [email],
+                            function () {
+                                conn.end();
+                                resolve({ success: true });
+                            }
+                        );
+                    });
                 });
             });
         });
-    });
-},
-
+    },
     getMemberActivateCode: function (email) {
         return new Promise( ( resolve, reject ) => {
             var conn = db.getConnection();
@@ -267,6 +278,10 @@ var memberDB = {
                             conn.end();
                             return reject(err);
                         } else {
+                            if (!result || result.length === 0) {
+                                conn.end();
+                                return reject(new Error('Member not found'));
+                            }
                             var member = new Member();
                             member.activationCode = result[0].ACTIVATIONCODE;
                             conn.end();
@@ -378,6 +393,10 @@ var memberDB = {
                             conn.end();
                             return reject(err);
                         } else {
+                            if (!result || result.length === 0) {
+                                conn.end();
+                                return reject(new Error('Member not found'));
+                            }
                             var member = JSON.parse(JSON.stringify(result[0]));
                             var mailOptions = {
                                 from: 'islandfurnituresep@gmail.com',
@@ -417,6 +436,10 @@ var memberDB = {
                             conn.end();
                             return reject(err);
                         } else {
+                            if (!result || result.length === 0) {
+                                conn.end();
+                                return reject(new Error('Member not found'));
+                            }
                             var member = new Member();
                             member.passwordReset = result[0].PASSWORDRESET;
                             conn.end();
@@ -514,7 +537,7 @@ var memberDB = {
                             return reject(err);
                         }
                         else {
-                            if(result == null || result == undefined || result == '') {
+                            if(result == null || result == undefined || result == '' || result.length === 0) {
                                 conn.end();
                                 return resolve({success:false});
                             }
